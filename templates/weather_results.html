@@ -1,0 +1,37 @@
+<!-- templates/weather_results.html -->
+{{ if .error }}
+<div id="errorMessage">
+  <p>{{ .error }}</p>
+</div>
+{{ else }}
+<h2>Weather for {{ .location }}</h2>
+<div class="source-info">
+  <p>Data source: {{ .source }}</p>
+  <p>Time: {{ .timestamp }}</p>
+</div>
+
+<div class="weather-data">
+  {{ with .weather }}
+  <div class="current-conditions">
+    <h3>Current Conditions</h3>
+    <p>Temperature: {{ index .currentConditions "temp" }}°F</p>
+    <p>Conditions: {{ index .currentConditions "conditions" }}</p>
+    <p>Humidity: {{ index .currentConditions "humidity" }}%</p>
+  </div>
+
+  <div class="forecast">
+    <h3>Forecast</h3>
+    <div class="days">
+      {{ range .days }}
+      <div class="day">
+        <h4>{{ .datetime }}</h4>
+        <p>High: {{ .tempmax }}°F</p>
+        <p>Low: {{ .tempmin }}°F</p>
+        <p>{{ .conditions }}</p>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{ end }}

@@ -1,10 +1,13 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 	"weather-redis-cache/initializers"
 
@@ -19,24 +22,24 @@ type Location struct {
 
 func FetchWeather(c *gin.Context) {
 	// Validate body request
-	var location Location
-	if err := c.BindJSON(&location); err != nil {
-		fmt.Println("JSON binding error:", err.Error())
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Log the location to help with debugging
-	fmt.Println("Received location:", location.Location)
+	location := c.PostForm("location")
 
 	// Validate that location is not empty
-	if location.Location == "" {
-		c.JSON(400, gin.H{"error": "Location is required"})
+	if location == "" {
+		if c.GetHeader("HX-Request") == "true" {
+			c.HTML(http.StatusBadRequest, "weather_results.html", gin.H{
+				"error": "Location is required",
+			})
+		} else {
+			c.HTML(http.StatusBadRequest, "index.html", gin.H{
+				"error": "Location is required",
+			})
+		}
 		return
 	}
 
-	// Create a unique cache key for this specific location
-	cacheKey := fmt.Sprintf("weather:%s", location.Location)
+	// Then use the location string directly
+	cacheKey := fmt.Sprintf("weather:%s", location)
 
 	// First, attempt to retrieve data from the Redis cache
 	cachedData, err := initializers.RDB.Get(initializers.CTX, cacheKey).Result()
@@ -47,31 +50,69 @@ func FetchWeather(c *gin.Context) {
 
 	// Cache hit case - we found data in the cache!
 	if err == nil {
-		fmt.Println("✅ Cache HIT for", location.Location)
+		fmt.Println("✅ Cache HIT for", location)
 
-		// Return the cached data along with metadata indicating it came from cache
-		c.JSON(http.StatusOK, gin.H{
-			"weather":   cachedData,
+		// Parse the weather data
+		var weatherData map[string]any
+		err = json.Unmarshal([]byte(cachedData), &weatherData)
+		if err != nil {
+			if c.GetHeader("HX-Request") == "true" {
+				c.HTML(http.StatusInternalServerError, "weather_results.html", gin.H{
+					"error": "Failed to parse weather data",
+				})
+			} else {
+				c.HTML(http.StatusInternalServerError, "index.html", gin.H{
+					"error": "Failed to parse weather data",
+				})
+			}
+			return
+		}
+
+		// Return appropriate template based on request type
+		templateData := gin.H{
+			"weather":   weatherData,
 			"source":    "cache",
-			"cached_at": formattedTime,
-		})
+			"timestamp": formattedTime,
+			"location":  location,
+		}
+
+		if c.GetHeader("HX-Request") == "true" {
+			c.HTML(http.StatusOK, "weather_results.html", templateData)
+		} else {
+			c.HTML(http.StatusOK, "index.html", templateData)
+		}
 		return
 	}
 
 	// Handle potential Redis errors that aren't just "key not found"
 	if err != redis.Nil {
 		fmt.Println("⚠️ Redis error:", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Redis error: " + err.Error()})
+		errorMessage := "Redis error: " + err.Error()
+
+		if c.GetHeader("HX-Request") == "true" {
+			c.HTML(http.StatusInternalServerError, "weather_results.html", gin.H{
+				"error": errorMessage,
+			})
+		} else {
+			c.HTML(http.StatusInternalServerError, "index.html", gin.H{
+				"error": errorMessage,
+			})
+		}
 		return
 	}
 
 	// Cache miss - need to fetch fresh data from the API
-	fmt.Println("❌ Cache MISS for", location.Location, "- fetching from API")
+	fmt.Println("❌ Cache MISS for", location, "- fetching from API")
+
+	// Clean and encode the location
+	cleanedLocation := strings.ToLower(location)
+	cleanedLocation = strings.ReplaceAll(cleanedLocation, ",", "")
+	encodedLocation := url.QueryEscape(cleanedLocation)
 
 	// Construct the API URL with the location and your API key
 	apiKey := os.Getenv("KEY")
 	url := "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/" +
-		location.Location + "?unitGroup=us&key=" + apiKey + "&contentType=json"
+		encodedLocation + "?unitGroup=us&key=" + apiKey + "&contentType=json"
 
 	fmt.Println("Making API request to:", url)
 
@@ -79,7 +120,17 @@ func FetchWeather(c *gin.Context) {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println("⚠️ API request failed:", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch weather data: " + err.Error()})
+		errorMessage := "Failed to fetch weather data: " + err.Error()
+
+		if c.GetHeader("HX-Request") == "true" {
+			c.HTML(http.StatusInternalServerError, "weather_results.html", gin.H{
+				"error": errorMessage,
+			})
+		} else {
+			c.HTML(http.StatusInternalServerError, "index.html", gin.H{
+				"error": errorMessage,
+			})
+		}
 		return
 	}
 
@@ -89,7 +140,17 @@ func FetchWeather(c *gin.Context) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("⚠️ Failed to read API response:", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response body: " + err.Error()})
+		errorMessage := "Failed to read response body: " + err.Error()
+
+		if c.GetHeader("HX-Request") == "true" {
+			c.HTML(http.StatusInternalServerError, "weather_results.html", gin.H{
+				"error": errorMessage,
+			})
+		} else {
+			c.HTML(http.StatusInternalServerError, "index.html", gin.H{
+				"error": errorMessage,
+			})
+		}
 		return
 	}
 
@@ -99,14 +160,38 @@ func FetchWeather(c *gin.Context) {
 		fmt.Println("⚠️ Error caching data:", err.Error())
 		// We'll continue even if caching fails - just log the error
 	} else {
-		fmt.Println("✅ Successfully cached data for", location.Location)
+		fmt.Println("✅ Successfully cached data for", location)
 	}
 
-	// Return the fresh API data to the client with metadata
-	c.JSON(http.StatusOK, gin.H{
-		"weather":       string(body),
-		"source":        "api",
-		"fetched_at":    formattedTime,
-		"cache_expires": currentTime.Add(1 * time.Minute).Format(time.RFC3339),
-	})
+	// Parse the weather data - FIX: Use body instead of cachedData
+	var weatherData map[string]any
+	err = json.Unmarshal(body, &weatherData)
+	if err != nil {
+		errorMessage := "Failed to parse weather data"
+
+		if c.GetHeader("HX-Request") == "true" {
+			c.HTML(http.StatusInternalServerError, "weather_results.html", gin.H{
+				"error": errorMessage,
+			})
+		} else {
+			c.HTML(http.StatusInternalServerError, "index.html", gin.H{
+				"error": errorMessage,
+			})
+		}
+		return
+	}
+
+	// Return based on response
+	templateData := gin.H{
+		"weather":   weatherData,
+		"source":    "api",
+		"timestamp": formattedTime,
+		"location":  location,
+	}
+
+	if c.GetHeader("HX-Request") == "true" {
+		c.HTML(http.StatusOK, "weather_results.html", templateData)
+	} else {
+		c.HTML(http.StatusOK, "index.html", templateData)
+	}
 }

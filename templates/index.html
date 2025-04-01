@@ -5,16 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ .title }}</title>
     <link rel="stylesheet" href="/static/css/style.css" />
+    <script
+      src="https://unpkg.com/htmx.org@2.0.4"
+      integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <div class="container">
       <h1>Weather App</h1>
       <h2>Redis caching + Golang REST API + Weather API</h2>
       <div class="search-box">
-        <form id="weatherForm">
+        <form
+          id="weatherForm"
+          hx-post="/weather"
+          hx-trigger="submit"
+          hx-target="#weatherResults"
+          hx-swap="innerHTML"
+          hx-indicator="#loadingIndicator"
+        >
           <input
             type="text"
-            id="location"
+            name="location"
             placeholder="Enter location (e.g., New York)"
             required
           />
@@ -23,30 +35,49 @@
       </div>
 
       <div class="results-container">
-        <div id="loadingIndicator" class="hidden">
+        <!-- Loading indicator that shows during requests -->
+        <div id="loadingIndicator" class="htmx-indicator">
           <p>Loading weather data...</p>
         </div>
-
-        <div id="weatherResults" class="hidden">
-          <h2>Weather for <span id="locationName"></span></h2>
-          <div class="source-info">
-            <p>Data source: <span id="dataSource"></span></p>
-            <p id="timeInfo"></p>
-          </div>
-
-          <div id="weatherData">
-            <!-- Weather data will be displayed here -->
-          </div>
+        {{ if .error }}
+        <div id="errorMessage">
+          <p>{{ .error }}</p>
         </div>
+        {{ else }}
+        <div id="weatherResults">
+          <h2>Weather for {{ .location }}</h2>
+          <div class="source-info">
+            <p>Data source: {{ .source }}</p>
+            <p>Time: {{ .timestamp }}</p>
+          </div>
 
-        <div id="errorMessage" class="hidden">
-          <p>
-            There was an error retrieving the weather data. Please try again.
-          </p>
+          <div class="weather-data">
+            {{ with .weather }}
+            <div class="current-conditions">
+              <h3>Current Conditions</h3>
+              <p>Temperature: {{ index .currentConditions "temp" }}°F</p>
+              <p>Conditions: {{ index .currentConditions "conditions" }}</p>
+              <p>Humidity: {{ index .currentConditions "humidity" }}%</p>
+            </div>
+
+            <div class="forecast">
+              <h3>Forecast</h3>
+              <div class="days">
+                {{ range .days }}
+                <div class="day">
+                  <h4>{{ .datetime }}</h4>
+                  <p>High: {{ .tempmax }}°F</p>
+                  <p>Low: {{ .tempmin }}°F</p>
+                  <p>{{ .conditions }}</p>
+                </div>
+                {{ end }}
+              </div>
+            </div>
+            {{ end }}
+          </div>
+          {{ end }}
         </div>
       </div>
     </div>
-
-    <script src="/static/js/app.js"></script>
   </body>
 </html>
