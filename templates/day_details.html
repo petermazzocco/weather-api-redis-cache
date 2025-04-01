@@ -1,0 +1,25 @@
+<div class="day-detail">
+  <h2>Weather Details for {{ .datetime}}</h2>
+
+  <div class="detail-card">
+    <p>Temperature: {{ index .currentConditions "temp" }}°F</p>
+    <p>Conditions: {{ index .currentConditions "conditions" }}</p>
+    <p>Humidity: {{ index .currentConditions "humidity" }}%</p>
+    <div class="day">
+      <h4>{{ .datetime }}</h4>
+      <p>High: {{ .tempmax }}°F</p>
+      <p>Low: {{ .tempmin }}°F</p>
+      <p>{{ .conditions }}</p>
+    </div>
+
+    <!-- Button to go back to summary view -->
+    <button
+      hx-get="/"
+      hx-target="body"
+      hx-swap="innerHTML"
+      hx-push-url="/"
+    >
+      Back to Summary
+    </button>
+  </div>
+</div>
