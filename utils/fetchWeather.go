@@ -154,8 +154,8 @@ func FetchWeather(c *gin.Context) {
 		return
 	}
 
-	// Store the API response in Redis cache with a 1 minute TTL
-	err = initializers.RDB.Set(initializers.CTX, cacheKey, string(body), 1*time.Minute).Err()
+	// Store the API response in Redis cache with a 10 minute TTL
+	err = initializers.RDB.Set(initializers.CTX, cacheKey, string(body), 10*time.Minute).Err()
 	if err != nil {
 		fmt.Println("⚠️ Error caching data:", err.Error())
 		// We'll continue even if caching fails - just log the error

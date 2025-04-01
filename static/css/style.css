@@ -46,8 +46,7 @@ input[type="text"] {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 16px;
-  width: 100%;
-  max-width: 400px;
+  width: 300px;
   transition: border-color 0.2s;
 }
 
@@ -60,8 +59,7 @@ button {
   cursor: pointer;
   font-size: 16px;
   transition: background-color 0.2s;
-  width: 100%;
-  max-width: 400px;
+  width: 300px;
   transition: background-color 0.2s, transform 0.2s;
 }
 
@@ -81,7 +79,6 @@ button:hover {
   background-color: #f8f9fa;
   padding: 1.5rem;
   border-radius: 6px;
-  border-left: 4px solid #3498db;
 }
 
 .source-info {
@@ -95,14 +92,6 @@ button:hover {
 #dataSource {
   font-weight: bold;
   color: #333;
-}
-
-#dataSource.cache {
-  color: #27ae60;
-}
-
-#dataSource.api {
-  color: #e67e22;
 }
 
 #weatherData {

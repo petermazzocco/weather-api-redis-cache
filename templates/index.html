@@ -14,7 +14,6 @@
   <body>
     <div class="container">
       <h1>Weather App</h1>
-      <h2>Redis caching + Golang REST API + Weather API</h2>
       <div class="search-box">
         <form
           id="weatherForm"
@@ -35,16 +34,19 @@
       </div>
 
       <div class="results-container">
-        <!-- Loading indicator that shows during requests -->
         <div id="loadingIndicator" class="htmx-indicator">
           <p>Loading weather data...</p>
         </div>
+
         {{ if .error }}
         <div id="errorMessage">
           <p>{{ .error }}</p>
         </div>
         {{ else }}
         <div id="weatherResults">
+          {{ if not .location and not .error }}
+          <p>Enter a location to get weather information</p>
+          {{ end }}
           <h2>Weather for {{ .location }}</h2>
           <div class="source-info">
             <p>Data source: {{ .source }}</p>
