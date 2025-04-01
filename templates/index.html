@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ .title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Weather App</h1>
+      <h2>Redis caching + Golang REST API + Weather API</h2>
+      <div class="search-box">
+        <form id="weatherForm">
+          <input
+            type="text"
+            id="location"
+            placeholder="Enter location (e.g., New York)"
+            required
+          />
+          <button type="submit">Get Weather</button>
+        </form>
+      </div>
+
+      <div class="results-container">
+        <div id="loadingIndicator" class="hidden">
+          <p>Loading weather data...</p>
+        </div>
+
+        <div id="weatherResults" class="hidden">
+          <h2>Weather for <span id="locationName"></span></h2>
+          <div class="source-info">
+            <p>Data source: <span id="dataSource"></span></p>
+            <p id="timeInfo"></p>
+          </div>
+
+          <div id="weatherData">
+            <!-- Weather data will be displayed here -->
+          </div>
+        </div>
+
+        <div id="errorMessage" class="hidden">
+          <p>
+            There was an error retrieving the weather data. Please try again.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
