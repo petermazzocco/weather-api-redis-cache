@@ -114,8 +114,6 @@ func FetchWeather(c *gin.Context) {
 	url := "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/" +
 		encodedLocation + "?unitGroup=us&key=" + apiKey + "&contentType=json"
 
-	fmt.Println("Making API request to:", url)
-
 	// Make the HTTP request to the weather API
 	resp, err := http.Get(url)
 	if err != nil {
